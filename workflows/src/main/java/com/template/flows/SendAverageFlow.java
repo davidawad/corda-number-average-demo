@@ -6,6 +6,7 @@ import com.template.contracts.TemplateContract;
 import com.template.states.AverageState;
 import com.template.states.NumberState;
 import com.template.states.TemplateState;
+// import jdk.internal.jline.internal.Nullable;
 import net.corda.core.contracts.StateAndRef;
 import net.corda.core.contracts.UniqueIdentifier;
 import net.corda.core.flows.*;
@@ -16,10 +17,10 @@ import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.transactions.TransactionBuilder;
 import net.corda.core.utilities.ProgressTracker;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+// import org.jetbrains.annotations.Nullable;
+
+
+import java.util.*;
 import java.util.stream.Collectors;
 
 // ******************
@@ -29,7 +30,25 @@ import java.util.stream.Collectors;
 @StartableByRPC
 public class SendAverageFlow extends FlowLogic<SignedTransaction> {
 
-    private final ProgressTracker progressTracker = new ProgressTracker();
+    private static final ProgressTracker.Step CREATING = new ProgressTracker.Step("Creating the transaction!");
+    private static final ProgressTracker.Step SIGNING = new ProgressTracker.Step("Signing the transaction!");
+    private static final ProgressTracker.Step VERIFYING = new ProgressTracker.Step("Verfiying the transaction!");
+    private static final ProgressTracker.Step FINALISING = new ProgressTracker.Step("Sending the transaction!") {
+        //@Nullable
+        @Override
+        public ProgressTracker childProgressTracker() {
+            return FinalityFlow.tracker();
+        }
+    };
+
+    ProgressTracker progressTracker = new ProgressTracker(
+            CREATING,
+            SIGNING,
+            VERIFYING,
+            FINALISING
+    );
+
+    //@Nullable
     @Override
     public ProgressTracker getProgressTracker() {
         return progressTracker;
@@ -49,12 +68,13 @@ public class SendAverageFlow extends FlowLogic<SignedTransaction> {
     @Suspendable
     @Override
     public SignedTransaction call() throws FlowException {
+        progressTracker.setCurrentStep(CREATING);
+
         this.sender = getOurIdentity();
 
         // Step 1. Get a reference to the notary service on our network and our key pair.
         // Note: ongoing work to support multiple notary identities is still in progress.
         final Party notary = getServiceHub().getNetworkMapCache().getNotaryIdentities().get(0);
-
 
         // find state objects for each party's array of integers
         List<NumberState> states = new ArrayList<NumberState>();
@@ -77,8 +97,11 @@ public class SendAverageFlow extends FlowLogic<SignedTransaction> {
         // force a sender to be specified in order for partipants to be set.
         receiver = states.get(0).getSender();
 
+        List <Party> recipientsWithoutSender = new ArrayList(recipients);
+        recipientsWithoutSender.remove(getOurIdentity());
+
         //Compose the State that carries the average to be sent
-        final AverageState output = new AverageState(avg, receiver, sender);
+        final AverageState output = new AverageState(avg, sender, recipientsWithoutSender.get(0), recipientsWithoutSender.get(1));
 
         // Step 3. Create a new TransactionBuilder object.
         final TransactionBuilder builder = new TransactionBuilder(notary);
@@ -88,7 +111,8 @@ public class SendAverageFlow extends FlowLogic<SignedTransaction> {
 
         builder.addCommand(new AverageStateContract.Commands.Send(), Arrays.asList(states.get(0).getSender().getOwningKey(), states.get(1).getSender().getOwningKey()));
 
-        // Step 5. Verify and sign it with our KeyPair.
+        // Step 5. Verify and sign it with our key pair.
+        progressTracker.setCurrentStep(VERIFYING);
         builder.verify(getServiceHub());
         final SignedTransaction ptx = getServiceHub().signInitialTransaction(builder);
 
@@ -97,10 +121,14 @@ public class SendAverageFlow extends FlowLogic<SignedTransaction> {
         otherParties.remove(getOurIdentity());
         List<FlowSession> sessions = otherParties.stream().map(el -> initiateFlow(el)).collect(Collectors.toList());
 
+        progressTracker.setCurrentStep(SIGNING);
         SignedTransaction stx = subFlow(new CollectSignaturesFlow(ptx, sessions));
 
+        progressTracker.setCurrentStep(FINALISING);
         // Step 7. Assuming no exceptions, we can now finalise the transaction
-        return subFlow(new FinalityFlow(stx, sessions));
+        // return subFlow(new FinalityFlow(stx, sessions));
+        return subFlow(new FinalityFlow(stx, sessions, Objects.requireNonNull(FINALISING.childProgressTracker())));
+
     }
 
     public double calculateAverage(List <Integer> marks) {

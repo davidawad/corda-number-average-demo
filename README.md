@@ -2,12 +2,81 @@
   <img src="https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png" alt="Corda" width="500">
 </p>
 
-# CorDapp Template - Java [<img src="https://raw.githubusercontent.com/corda/samples-java/master/webIDE.png" height=25 />](https://ide.corda.net/?folder=/home/coder/cordapp-template-java)
 
-Welcome to the Java CorDapp template. The CorDapp template is a stubbed-out CorDapp that you can use to bootstrap 
+# Computing an Average using multiple Corda nodes.
+
+Open a shell to build and run the local nodes.
+
+```
+$ ./gradlew deployNodes && ./build/nodes/runnodes
+```
+
+
+Once you have the nodes on hand, just run the flow to send numbers from both nodes to PartyC.
+
+
+```
+Thu Aug 27 13:54:47 EDT 2020>>> flow start com.template.flows.SendNumberListFlow recipient: PartyC
+```
+
+
+Then you can run a vault query to confirm that the nodes reached C.
+```
+[Thu Aug 27 13:54:29 EDT 2020>run vaultQuery contractStateType: com.template.states.NumberState
+- state:
+    data: !<com.template.states.NumberState>
+      sender: "O=PartyA, L=London, C=GB"
+      recipient: "O=PartyC, L=Cairo, C=EG"
+      numbers:
+      - 489
+      - 369
+      - 183
+      - 952
+      - 723
+      linearId:
+        externalId: null
+        id: "7aa5ccd6-c416-4578-974d-9aafb37d8a0d"
+    contract: "com.template.contracts.NumberStateContract"
+    notary: "O=Notary, L=London, C=GB"
+    encumbrance: null
+    constraint: !<net.corda.core.contracts.SignatureAttachmentConstraint>
+      key: "aSq9DsNNvGhYxYyqA9wd2eduEAZ5AXWgJTbTEw3G5d2maAq8vtLE4kZHgCs5jcB1N31cx1hpsLeqG2ngSysVHqcXhbNts6SkRWDaV7xNcr6MtcbufGUchxredBb6"
+  ref:
+    txhash: "BBDF13489568C7C10F237D56DA0F6B7B26EDAAA1120D146FC220EDFB574EF69B"
+    index: 0
+- state:
+    data: !<com.template.states.NumberState>
+      sender: "O=PartyB, L=New York, C=US"
+      recipient: "O=PartyC, L=Cairo, C=EG"
+      numbers:
+      - 33
+      - 787
+      - 411
+      - 999
+      - 342
+      linearId:
+        externalId: null
+        id: "28a49a96-098e-4382-a54c-384855f7fa82"
+```
+
+
+Lastly of course you can run a flow to send the average back to node A and B using the linear IDs of the previous transactions. (example id's shown here).
+
+The node will do the work of finding the recipients and getting the average back to them.
+
+```
+flow start com.template.flows.SendAverageFlow firstLinearId: 28a49a96-098e-4382-a54c-384855f7fa82, secondLinearId: 7aa5ccd6-c416-4578-974d-9aafb37d8a0d
+```
+
+
+
+
+## forked from CorDapp Template - Java [<img src="https://raw.githubusercontent.com/corda/samples-java/master/webIDE.png" height=25 />](https://ide.corda.net/?folder=/home/coder/cordapp-template-java)
+
+Welcome to the Java CorDapp template. The CorDapp template is a stubbed-out CorDapp that you can use to bootstrap
 your own CorDapps.
 
-**This is the Java version of the CorDapp template. The Kotlin equivalent is 
+**This is the Java version of the CorDapp template. The Kotlin equivalent is
 [here](https://github.com/corda/cordapp-template-kotlin/).**
 
 # Pre-Requisites
@@ -17,7 +86,7 @@ See https://docs.corda.net/getting-set-up.html.
 # Usage
 
 ## Running tests inside IntelliJ
-	
+
 We recommend editing your IntelliJ preferences so that you use the Gradle runner - this means that the quasar utils
 plugin will make sure that some flags (like ``-javaagent`` - see below) are
 set for you.
@@ -46,10 +115,10 @@ When started via the command line, each node will display an interactive shell:
 
     Welcome to the Corda interactive shell.
     Useful commands include 'help' to see what is available, and 'bye' to shut down the node.
-    
+
     Tue Nov 06 11:58:13 GMT 2018>>>
 
-You can use this shell to interact with your node. For example, enter `run networkMapSnapshot` to see a list of 
+You can use this shell to interact with your node. For example, enter `run networkMapSnapshot` to see a list of
 the other nodes on the network:
 
     Tue Nov 06 11:58:13 GMT 2018>>> run networkMapSnapshot
@@ -73,31 +142,31 @@ the other nodes on the network:
       "serial" : 1541505384742
     }
     ]
-    
-    Tue Nov 06 12:30:11 GMT 2018>>> 
+
+    Tue Nov 06 12:30:11 GMT 2018>>>
 
 You can find out more about the node shell [here](https://docs.corda.net/shell.html).
 
 ### Client
 
-`clients/src/main/java/com/template/Client.java` defines a simple command-line client that connects to a node via RPC 
+`clients/src/main/java/com/template/Client.java` defines a simple command-line client that connects to a node via RPC
 and prints a list of the other nodes on the network.
 
 #### Running the client
 
 ##### Via the command line
 
-Run the `runTemplateClient` Gradle task. By default, it connects to the node with RPC address `localhost:10006` with 
+Run the `runTemplateClient` Gradle task. By default, it connects to the node with RPC address `localhost:10006` with
 the username `user1` and the password `test`.
 
 ##### Via IntelliJ
 
-Run the `Run Template Client` run configuration. By default, it connects to the node with RPC address `localhost:10006` 
+Run the `Run Template Client` run configuration. By default, it connects to the node with RPC address `localhost:10006`
 with the username `user1` and the password `test`.
 
 ### Webserver
 
-`clients/src/main/java/com/template/webserver/` defines a simple Spring webserver that connects to a node via RPC and 
+`clients/src/main/java/com/template/webserver/` defines a simple Spring webserver that connects to a node via RPC and
 allows you to interact with the node over HTTP.
 
 The API endpoints are defined here:
@@ -112,12 +181,12 @@ And a static webpage is defined here:
 
 ##### Via the command line
 
-Run the `runTemplateServer` Gradle task. By default, it connects to the node with RPC address `localhost:10006` with 
+Run the `runTemplateServer` Gradle task. By default, it connects to the node with RPC address `localhost:10006` with
 the username `user1` and the password `test`, and serves the webserver on port `localhost:10050`.
 
 ##### Via IntelliJ
 
-Run the `Run Template Server` run configuration. By default, it connects to the node with RPC address `localhost:10006` 
+Run the `Run Template Server` run configuration. By default, it connects to the node with RPC address `localhost:10006`
 with the username `user1` and the password `test`, and serves the webserver on port `localhost:10050`.
 
 #### Interacting with the webserver
@@ -129,7 +198,7 @@ The static webpage is served on:
 While the sole template endpoint is served on:
 
     http://localhost:10050/templateendpoint
-    
+
 # Extending the template
 
 You should extend this template as follows:
@@ -138,5 +207,5 @@ You should extend this template as follows:
 * Add your own flow definitions under `workflows/src/main/java/`
 * Extend or replace the client and webserver under `clients/src/main/java/`
 
-For a guided example of how to extend this template, see the Hello, World! tutorial 
+For a guided example of how to extend this template, see the Hello, World! tutorial
 [here](https://docs.corda.net/hello-world-introduction.html).

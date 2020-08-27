@@ -77,7 +77,6 @@ public class SendNumberListFlowTests {
         tx1 = first5.get();
         tx2 = next5.get();
 
-
         NumberState firstState = tx1.getTx().outputsOfType(NumberState.class).get(0);
         NumberState secondState = tx2.getTx().outputsOfType(NumberState.class).get(0);
 
@@ -95,7 +94,6 @@ public class SendNumberListFlowTests {
 
         List<Integer> combinedList = firstState.getNumbers();
         combinedList.addAll(secondState.getNumbers());
-
 
         // pass our previous states as inputs to the SendAverageFlow
         SendAverageFlow saf = new SendAverageFlow(firstState.getLinearId(), secondState.getLinearId());
@@ -115,8 +113,9 @@ public class SendNumberListFlowTests {
         System.out.println(combinedList);
         System.out.println("Reached end of tests, final average is " + Double.toString(actualAverage));
 
-        //assert(!tx3.getTx().getInputs().isEmpty()); // computing averages requires two input states
+        //assert(!tx3.getTx().getInputs().size() == 2); // computing averages requires two input states
         assert(thirdState.getAvg() == actualAverage);
+        
     }
 
 }

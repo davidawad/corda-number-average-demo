@@ -21,19 +21,28 @@ public class AverageState implements ContractState {
     //private variables
     private double avg;
     private Party recipient;
+    private Party secondRecipient;
     private Party sender;
 
+    private List<AbstractParty> participants;
+
+
     @ConstructorForDeserialization
-    public AverageState(double avg, Party recipient, Party sender) {
+    public AverageState(double avg, Party sender, Party recipient, Party secondRecipient) {
         this.avg = avg;
-        this.recipient = recipient;
         this.sender = sender;
+
+        participants = new ArrayList<AbstractParty>();
+        participants.add(sender);
+        participants.add(recipient);
+        participants.add(secondRecipient);
     }
 
     //getters
     public double getAvg() { return avg; }
     public Party getSender() { return sender; }
-    public Party getRecipient() { return sender; }
+    public Party getRecipient() { return recipient; }
+    public Party getSecondRecipient() { return secondRecipient; }
 
 
     /* This method will indicate who are the participants and required signers when
@@ -41,6 +50,6 @@ public class AverageState implements ContractState {
     @Override
     //@NotNull
     public List<AbstractParty> getParticipants() {
-        return Arrays.asList(sender, recipient);
+        return participants;
     }
 }
